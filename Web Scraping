@@ -1,0 +1,41 @@
+import requests
+from bs4 import BeautifulSoup
+import csv
+
+def scrape_books(url, output_file):
+    # Send a request to the website
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+    }
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        print(f"Failed to fetch the webpage. Status code: {response.status_code}")
+        return
+
+    # Parse the webpage content
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # Extract product details
+    products = []
+    for product in soup.select(".product_pod"):
+        try:
+            name = product.select_one("h3 a")["title"]
+            price = product.select_one(".price_color").text.strip()
+            rating = product.select_one(".star-rating")["class"][1]  # Extract the rating class
+            products.append({"Name": name, "Price": price, "Rating": rating})
+        except AttributeError:
+            continue
+
+    # Write data to CSV
+    with open(output_file, "w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames=["Name", "Price", "Rating"])
+        writer.writeheader()
+        writer.writerows(products)
+
+    print(f"Data successfully scraped and saved to {output_file}")
+
+# Example usage
+url = "http://books.toscrape.com/catalogue/category/books/science_22/index.html"
+output_file = "books.csv"
+scrape_books(url, output_file)
